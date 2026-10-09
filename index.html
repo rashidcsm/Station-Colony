@@ -38,30 +38,27 @@
     background: #05659C;
     color: #333;
     position: relative;
-    overflow: hidden;              /* পুরো পেইজ স্ক্রল হবে না */
+    overflow: hidden;
   }
 
-  .vertical-watermark {
+  /* ===== ব্যাকগ্রাউন্ড ছবি ===== */
+  .bg-image {
     position: fixed;
-    top: 50%; left: 50%;
-    transform: translate(-50%, -50%);
-    font-size: clamp(38px, 6vw, 72px);
-    font-weight: 800;
-    color: rgba(255, 255, 255, 0.85);
-    line-height: 1.15;
-    letter-spacing: 4px;
-    text-align: center;
-    white-space: nowrap;
-    pointer-events: none;
-    user-select: none;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background-image: url('https://res.cloudinary.com/wasi/image/upload/v1791532657/StnColonyWallpaper.jpg');
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
     z-index: 0;
-    text-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    pointer-events: none;
     opacity: 1;
     visibility: visible;
-    transition: opacity .35s ease, visibility .35s ease;
+    transition: opacity .4s ease, visibility .4s ease;
   }
-  .vertical-watermark.hide { opacity: 0; visibility: hidden; }
-  .vertical-watermark span { display: block; }
+  .bg-image.hide {
+    opacity: 0;
+    visibility: hidden;
+  }
 
   .sidebar {
     width: 260px; background: #1e3a5f; color: #fff;
@@ -110,7 +107,6 @@
   }
   .sidebar-overlay.show { opacity: 1; visibility: visible; }
 
-  /* ===== Main — flex column, ভিতরে স্ক্রল ===== */
   .main {
     margin-left: 260px;
     flex: 1;
@@ -143,7 +139,6 @@
     font-size: 20px; cursor: pointer; margin-right: 10px;
   }
 
-  /* ===== Card — flex column, ভিতরে স্ক্রল ===== */
   .card {
     padding: 0;
     position: relative;
@@ -163,7 +158,6 @@
     flex-shrink: 0;
   }
 
-  /* ===== সার্চ বক্স (স্থির) ===== */
   .search-box {
     margin-bottom: 14px;
     position: relative;
@@ -208,7 +202,6 @@
   }
   .search-box .clear-btn.show { display: block; }
 
-  /* ===== এডমিন অ্যাকশন বাটন (স্থির) ===== */
   .admin-actions {
     display: flex;
     gap: 10px;
@@ -219,7 +212,6 @@
   }
   .admin-actions .btn-add { margin-bottom: 0; }
 
-  /* ===== টেবিল স্ক্রল কন্টেইনার ===== */
   .table-scroll {
     flex: 1;
     min-height: 0;
@@ -265,7 +257,6 @@
     flex-shrink: 0;
   }
 
-  /* ===== ড্যাশবোর্ড স্ক্রল ===== */
   .dash-scroll {
     flex: 1;
     min-height: 0;
@@ -415,31 +406,25 @@
     }
     .hamburger { display: inline-block; }
     .topbar h1 { font-size: 16px; }
-    .vertical-watermark { font-size: clamp(32px, 9vw, 56px); }
     .dash-card .value { font-size: 22px; }
     .search-box { max-width: 100%; }
+    .bg-image { background-attachment: scroll; }
   }
 </style>
 </head>
 <body>
 
-<div id="progressBar"></div>
+<!-- ✅ ব্যাকগ্রাউন্ড ছবি -->
+<div class="bg-image" id="bgImage"></div>
 
-<div class="vertical-watermark" id="watermark">
-  <span>রেলওয়ে</span>
-  <span>স্টেশন</span>
-  <span>কলোনী</span>
-  <span>সমাজ</span>
-  <span>কল্যাণ</span>
-  <span>পরিষদ</span>
-</div>
+<div id="progressBar"></div>
 
 <div class="sidebar-overlay" id="sidebarOverlay"></div>
 
 <aside class="sidebar" id="sidebar">
   <div class="logo-box">
     <img id="logoImg"
-         src="https://res.cloudinary.com/demo/image/upload/sample.jpg"
+         src="https://res.cloudinary.com/wasi/image/upload/v1791534156/StnColonylogo.png"
          alt="Logo"
          onerror="this.src='https://via.placeholder.com/90?text=Logo'">
     <h2>রেলওয়ে স্টেশন কলোনী<br>সমাজ কল্যাণ পরিষদ<br>আইস ফেক্টরী রোড<br>৩০ নং ওয়ার্ড</h2>
@@ -484,7 +469,7 @@
 const CONFIG = {
   API_URL: 'https://script.google.com/macros/s/AKfycbzjqvrfHAuTAHBdFzBq2qzu4yqxxlj6J14QJa4bhUGtx3gCG7x8ldYwtDXQ9qpPYWEg/exec',
   ADMIN_PASSWORD: 'wasi',
-  LOGO_URL: 'https://res.cloudinary.com/YOUR_CLOUD_NAME/image/upload/v1234567/logo.png'
+  LOGO_URL: 'https://res.cloudinary.com/wasi/image/upload/v1791534156/StnColonylogo.png'
 };
 
 document.getElementById('logoImg').src = CONFIG.LOGO_URL;
@@ -770,7 +755,7 @@ async function renderDashboard() {
   </button>`;
   html += '</div>';
 
-  html += '</div>';   /* dash-scroll বন্ধ */
+  html += '</div>';
 
   contentArea.innerHTML = html;
   finishProgress();
@@ -787,11 +772,13 @@ window.gotoView = function(view) {
     b.classList.toggle('active', b.dataset.view === view);
   });
 
+  hideBgImage();
+
   loadView();
 };
 
 /* ============================================================
-   ৭) সার্চ হ্যান্ডলার (ফোকাস + স্ক্রল ফিক্স)
+   ৭) সার্চ হ্যান্ডলার
    ============================================================ */
 window.handleSearch = function(value) {
   state.searchQuery = value;
@@ -1048,8 +1035,6 @@ function resetToDefault() {
   document.querySelectorAll('.sidebar nav button').forEach(b => {
     b.classList.toggle('active', b.dataset.view === 'dashboard');
   });
-
-  showWatermark();
 }
 
 /* ============================================================
@@ -1118,7 +1103,6 @@ window.addRow = function(view) {
 
   tbody.appendChild(tr);
 
-  /* স্ক্রল নিচে নাও */
   const scroll = contentArea.querySelector('.table-scroll');
   if (scroll) scroll.scrollTop = scroll.scrollHeight;
 
@@ -1174,27 +1158,28 @@ window.saveData = async function(view) {
 };
 
 /* ============================================================
-   ১১) সাইডবার + ওয়াটারমার্ক
+   ১১) সাইডবার + ব্যাকগ্রাউন্ড ছবি
    ============================================================ */
 const sidebar         = document.getElementById('sidebar');
 const sidebarOverlay  = document.getElementById('sidebarOverlay');
-const watermark       = document.getElementById('watermark');
+const bgImage         = document.getElementById('bgImage');
 
-function showWatermark() { watermark.classList.remove('hide'); }
-function hideWatermark() { watermark.classList.add('hide'); }
+function showBgImage() { bgImage.classList.remove('hide'); }
+function hideBgImage() { bgImage.classList.add('hide'); }
 
 function openSidebar() {
   sidebar.classList.add('open');
   sidebarOverlay.classList.add('show');
-  hideWatermark();
+  hideBgImage();
   resetToDefault();
-  hideWatermark();
 }
 
 function closeSidebar(showText = true) {
   sidebar.classList.remove('open');
   sidebarOverlay.classList.remove('show');
-  if (showText) showWatermark();
+  if (showText) {
+    showBgImage();
+  }
 }
 
 /* ============================================================
@@ -1212,6 +1197,8 @@ document.querySelectorAll('.sidebar nav button').forEach(btn => {
 
     document.querySelectorAll('.sidebar nav button').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
+
+    hideBgImage();
 
     if (window.innerWidth <= 768) closeSidebar(false);
 
@@ -1281,6 +1268,7 @@ function doLogin() {
    ১৫) প্রাথমিক লোড
    ============================================================ */
 resetToDefault();
+showBgImage();
 loadView();
 </script>
 </body>
