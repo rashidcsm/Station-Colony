@@ -1,0 +1,1287 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>রেলওয়ে স্টেশন কলোনী সমাজ কল্যাণ পরিষদ</title>
+<style>
+  /* ===== টপ প্রোগ্রেস বার ===== */
+  #progressBar {
+    position: fixed;
+    top: 0; left: 0;
+    height: 3px;
+    width: 0%;
+    background: linear-gradient(90deg, #4fc3f7, #00bcd4, #26c6da);
+    box-shadow: 0 0 10px rgba(79, 195, 247, 0.7);
+    z-index: 9999;
+    transition: width .3s ease, opacity .3s ease;
+    opacity: 0;
+  }
+  #progressBar.active { opacity: 1; }
+  #progressBar::after {
+    content: '';
+    position: absolute;
+    top: 0; right: 0;
+    width: 60px; height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.8));
+    animation: shine 1.2s linear infinite;
+  }
+  @keyframes shine {
+    0%   { transform: translateX(-60px); }
+    100% { transform: translateX(20px); }
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', 'Noto Sans Bengali', sans-serif; }
+  html, body { height: 100%; }
+  body {
+    display: flex; min-height: 100vh;
+    background: #05659C;
+    color: #333;
+    position: relative;
+    overflow: hidden;              /* পুরো পেইজ স্ক্রল হবে না */
+  }
+
+  .vertical-watermark {
+    position: fixed;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: clamp(38px, 6vw, 72px);
+    font-weight: 800;
+    color: rgba(255, 255, 255, 0.85);
+    line-height: 1.15;
+    letter-spacing: 4px;
+    text-align: center;
+    white-space: nowrap;
+    pointer-events: none;
+    user-select: none;
+    z-index: 0;
+    text-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    opacity: 1;
+    visibility: visible;
+    transition: opacity .35s ease, visibility .35s ease;
+  }
+  .vertical-watermark.hide { opacity: 0; visibility: hidden; }
+  .vertical-watermark span { display: block; }
+
+  .sidebar {
+    width: 260px; background: #1e3a5f; color: #fff;
+    display: flex; flex-direction: column;
+    position: fixed; top: 0; left: 0; bottom: 0;
+    transition: transform .3s ease; z-index: 150;
+  }
+  .sidebar .logo-box {
+    padding: 20px; text-align: center;
+    border-bottom: 1px solid rgba(255,255,255,.15);
+  }
+  .sidebar .logo-box img {
+    max-width: 90px; max-height: 90px; border-radius: 50%;
+    background: #fff; padding: 4px;
+  }
+  .sidebar .logo-box h2 {
+    font-size: 15px; margin-top: 10px; line-height: 1.4; font-weight: 500;
+  }
+  .sidebar nav { flex: 1; overflow-y: auto; padding: 12px 0; }
+  .sidebar nav button {
+    display: block; width: 100%; text-align: left;
+    padding: 14px 20px; background: none; border: none;
+    color: #cbd6e2; font-size: 15px; cursor: pointer;
+    border-left: 4px solid transparent; transition: .2s;
+  }
+  .sidebar nav button:hover { background: rgba(255,255,255,.08); color: #fff; }
+  .sidebar nav button.active {
+    background: rgba(255,255,255,.12); color: #fff;
+    border-left-color: #4fc3f7; font-weight: 600;
+  }
+  .sidebar .admin-btn {
+    margin: 12px; padding: 12px; border-radius: 8px;
+    background: #e67e22; color: #fff; border: none;
+    font-size: 15px; cursor: pointer; font-weight: 600;
+  }
+  .sidebar .admin-btn:hover { background: #d35400; }
+  .sidebar .admin-btn.logout { background: #c0392b; }
+  .sidebar .admin-btn.logout:hover { background: #a93226; }
+
+  .sidebar-overlay {
+    position: fixed; inset: 0;
+    background: rgba(0, 0, 0, 0.45);
+    opacity: 0; visibility: hidden;
+    transition: opacity .3s ease, visibility .3s ease;
+    z-index: 140;
+  }
+  .sidebar-overlay.show { opacity: 1; visibility: visible; }
+
+  /* ===== Main — flex column, ভিতরে স্ক্রল ===== */
+  .main {
+    margin-left: 260px;
+    flex: 1;
+    padding: 24px;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    transition: margin .3s ease;
+    position: relative; z-index: 10;
+  }
+  .topbar {
+    display: flex; align-items: center;
+    padding: 12px 4px;
+    margin-bottom: 18px;
+    gap: 10px;
+    flex-shrink: 0;
+  }
+  .topbar h1 {
+    font-size: 18px;
+    color: #ffffff;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    text-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+  }
+  .hamburger {
+    display: none; background: #1e3a5f; color: #fff;
+    border: none; padding: 8px 12px; border-radius: 6px;
+    font-size: 20px; cursor: pointer; margin-right: 10px;
+  }
+
+  /* ===== Card — flex column, ভিতরে স্ক্রল ===== */
+  .card {
+    padding: 0;
+    position: relative;
+    z-index: 10;
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  .card h2 {
+    font-size: 18px; color: #ffffff;
+    margin-bottom: 14px;
+    padding-bottom: 8px;
+    border-bottom: 2px solid rgba(255, 255, 255, 0.35);
+    text-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+    flex-shrink: 0;
+  }
+
+  /* ===== সার্চ বক্স (স্থির) ===== */
+  .search-box {
+    margin-bottom: 14px;
+    position: relative;
+    max-width: 400px;
+    flex-shrink: 0;
+  }
+  .search-box input {
+    width: 100%;
+    padding: 11px 16px 11px 42px;
+    border: none;
+    border-radius: 25px;
+    font-size: 14px;
+    background: rgba(255, 255, 255, 0.95);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+    outline: none;
+    transition: box-shadow .2s;
+  }
+  .search-box input:focus {
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.2);
+  }
+  .search-box::before {
+    content: '🔍';
+    position: absolute;
+    left: 14px; top: 50%;
+    transform: translateY(-50%);
+    font-size: 15px;
+    pointer-events: none;
+  }
+  .search-box .clear-btn {
+    position: absolute;
+    right: 12px; top: 50%;
+    transform: translateY(-50%);
+    background: #e0e6ed;
+    border: none;
+    width: 22px; height: 22px;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 13px;
+    color: #666;
+    display: none;
+    line-height: 1;
+  }
+  .search-box .clear-btn.show { display: block; }
+
+  /* ===== এডমিন অ্যাকশন বাটন (স্থির) ===== */
+  .admin-actions {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    align-items: center;
+    margin-bottom: 12px;
+    flex-shrink: 0;
+  }
+  .admin-actions .btn-add { margin-bottom: 0; }
+
+  /* ===== টেবিল স্ক্রল কন্টেইনার ===== */
+  .table-scroll {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    border-radius: 8px;
+    padding-bottom: 6px;
+  }
+
+  table {
+    width: 100%; border-collapse: collapse; font-size: 14px;
+    background: #ffffff;
+    border-radius: 8px; overflow: hidden;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+  }
+  th, td { padding: 10px 12px; border: 1px solid #e0e6ed; text-align: left; }
+  th {
+    background: #1e3a5f; color: #fff; font-weight: 600; white-space: nowrap;
+    position: sticky;
+    top: 0;
+    z-index: 5;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+  }
+  tbody tr:nth-child(even) { background: #f8fafc; }
+  tbody tr:hover { background: #eaf4fd; }
+  .paid { color: #27ae60; font-weight: 600; text-align: center; }
+  .unpaid { color: #c0392b; text-align: center; }
+
+  .loading { display: none; }
+  .empty {
+    text-align: center; padding: 30px;
+    color: rgba(255, 255, 255, 0.95);
+    font-style: italic; font-size: 16px;
+    text-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+    flex-shrink: 0;
+  }
+  .no-result {
+    text-align: center; padding: 30px;
+    color: rgba(255, 255, 255, 0.95);
+    font-style: italic; font-size: 16px;
+    text-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+    flex-shrink: 0;
+  }
+
+  /* ===== ড্যাশবোর্ড স্ক্রল ===== */
+  .dash-scroll {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  .dash-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 14px;
+    margin-bottom: 20px;
+  }
+  .dash-card {
+    background: rgba(255, 255, 255, 0.97);
+    border-radius: 12px;
+    padding: 18px 20px;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.1);
+    position: relative;
+    overflow: hidden;
+    transition: transform .2s, box-shadow .2s;
+  }
+  .dash-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+  }
+  .dash-card .icon {
+    font-size: 28px;
+    margin-bottom: 8px;
+    display: block;
+  }
+  .dash-card .label {
+    font-size: 13px;
+    color: #666;
+    margin-bottom: 6px;
+    font-weight: 500;
+  }
+  .dash-card .value {
+    font-size: 26px;
+    font-weight: 800;
+    color: #1e3a5f;
+    line-height: 1.1;
+  }
+  .dash-card .unit {
+    font-size: 14px;
+    color: #888;
+    font-weight: 500;
+    margin-left: 4px;
+  }
+  .dash-card.cyan    { border-left: 5px solid #00bcd4; }
+  .dash-card.green   { border-left: 5px solid #27ae60; }
+  .dash-card.orange  { border-left: 5px solid #e67e22; }
+  .dash-card.red     { border-left: 5px solid #c0392b; }
+  .dash-card.blue    { border-left: 5px solid #2980b9; }
+  .dash-card.purple  { border-left: 5px solid #8e44ad; }
+
+  .dash-section-title {
+    color: #fff;
+    font-size: 16px;
+    font-weight: 700;
+    margin: 24px 0 12px;
+    padding-bottom: 8px;
+    border-bottom: 2px solid rgba(255,255,255,0.35);
+    text-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+  }
+
+  .quick-links {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 12px;
+    padding-bottom: 20px;
+  }
+  .quick-link {
+    background: rgba(255, 255, 255, 0.97);
+    border-radius: 10px;
+    padding: 16px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    transition: transform .2s, box-shadow .2s;
+    border: none;
+    text-align: left;
+    width: 100%;
+    font-family: inherit;
+  }
+  .quick-link:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15);
+  }
+  .quick-link .ql-icon { font-size: 26px; }
+  .quick-link .ql-text {
+    font-size: 14px;
+    font-weight: 600;
+    color: #1e3a5f;
+  }
+
+  .modal-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,.55);
+    display: none; align-items: center; justify-content: center; z-index: 200;
+  }
+  .modal-overlay.show { display: flex; }
+  .modal {
+    background: #fff; border-radius: 12px; padding: 28px;
+    width: 90%; max-width: 380px; text-align: center;
+  }
+  .modal h3 { color: #1e3a5f; margin-bottom: 16px; }
+  .modal input {
+    width: 100%; padding: 11px 14px; border: 1px solid #ccc;
+    border-radius: 8px; font-size: 15px; margin-bottom: 16px;
+  }
+  .modal input:focus { outline: none; border-color: #1e3a5f; }
+  .modal .btns { display: flex; gap: 10px; }
+  .modal .btns button {
+    flex: 1; padding: 11px; border: none; border-radius: 8px;
+    font-size: 15px; cursor: pointer; font-weight: 600;
+  }
+  .modal .btns .ok { background: #1e3a5f; color: #fff; }
+  .modal .btns .cancel { background: #e0e6ed; color: #333; }
+  .modal .error { color: #c0392b; font-size: 13px; margin-bottom: 10px; }
+
+  td input[type="text"], td input[type="number"] {
+    width: 100%; padding: 6px 8px; border: 1px solid #4fc3f7;
+    border-radius: 4px; font-size: 13px;
+  }
+  .btn-save {
+    background: #27ae60; color: #fff; border: none;
+    padding: 10px 22px; border-radius: 8px; cursor: pointer;
+    font-size: 14px; font-weight: 600; margin-top: 14px;
+  }
+  .btn-save:hover { background: #219150; }
+  .btn-add {
+    background: #4fc3f7; color: #fff; border: none;
+    padding: 8px 16px; border-radius: 6px; cursor: pointer;
+    font-size: 13px; margin-bottom: 12px; font-weight: 600;
+  }
+  .btn-add:hover { background: #29b6f6; }
+
+  @media (max-width: 768px) {
+    .sidebar { transform: translateX(-100%); }
+    .sidebar.open { transform: translateX(0); }
+    .main {
+      margin-left: 0;
+      padding: 16px;
+      height: 100vh;
+      overflow: hidden;
+    }
+    .hamburger { display: inline-block; }
+    .topbar h1 { font-size: 16px; }
+    .vertical-watermark { font-size: clamp(32px, 9vw, 56px); }
+    .dash-card .value { font-size: 22px; }
+    .search-box { max-width: 100%; }
+  }
+</style>
+</head>
+<body>
+
+<div id="progressBar"></div>
+
+<div class="vertical-watermark" id="watermark">
+  <span>রেলওয়ে</span>
+  <span>স্টেশন</span>
+  <span>কলোনী</span>
+  <span>সমাজ</span>
+  <span>কল্যাণ</span>
+  <span>পরিষদ</span>
+</div>
+
+<div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+<aside class="sidebar" id="sidebar">
+  <div class="logo-box">
+    <img id="logoImg"
+         src="https://res.cloudinary.com/demo/image/upload/sample.jpg"
+         alt="Logo"
+         onerror="this.src='https://via.placeholder.com/90?text=Logo'">
+    <h2>রেলওয়ে স্টেশন কলোনী<br>সমাজ কল্যাণ পরিষদ<br>আইস ফেক্টরী রোড<br>৩০ নং ওয়ার্ড</h2>
+  </div>
+  <nav>
+    <button data-view="dashboard" class="active">🏠 ড্যাশবোর্ড</button>
+    <button data-view="board">ক. পরিচালনা পর্ষদ</button>
+    <button data-view="allotment">খ. বরাদ্দ প্রাপ্ত বাসার পরিচিতি</button>
+    <button data-view="fees">গ. মাসিক সমাজ কল্যাণ ফি</button>
+    <button data-view="expenses">ঘ. খরচের সারসংক্ষেপ</button>
+  </nav>
+  <button class="admin-btn" id="adminBtn">🔒 এডমিন লগইন</button>
+</aside>
+
+<main class="main">
+  <div class="topbar">
+    <div style="display:flex;align-items:center;min-width:0;">
+      <button class="hamburger" id="hamburger">☰</button>
+      <h1 id="pageTitle">রেলওয়ে সমাজ কল্যাণ পরিষদ</h1>
+    </div>
+  </div>
+
+  <div class="card" id="contentArea"></div>
+</main>
+
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal">
+    <h3>🔐 এডমিন পাসওয়ার্ড</h3>
+    <div class="error" id="modalError" style="display:none;">ভুল পাসওয়ার্ড!</div>
+    <input type="password" id="passwordInput" placeholder="পাসওয়ার্ড লিখুন">
+    <div class="btns">
+      <button class="cancel" id="modalCancel">বাতিল</button>
+      <button class="ok" id="modalOk">লগইন</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ============================================================
+   ১) কনফিগারেশন
+   ============================================================ */
+const CONFIG = {
+  API_URL: 'https://script.google.com/macros/s/AKfycbzjqvrfHAuTAHBdFzBq2qzu4yqxxlj6J14QJa4bhUGtx3gCG7x8ldYwtDXQ9qpPYWEg/exec',
+  ADMIN_PASSWORD: 'wasi',
+  LOGO_URL: 'https://res.cloudinary.com/YOUR_CLOUD_NAME/image/upload/v1234567/logo.png'
+};
+
+document.getElementById('logoImg').src = CONFIG.LOGO_URL;
+
+/* ============================================================
+   ২) প্রোগ্রেস বার কন্ট্রোল
+   ============================================================ */
+const progressBar = document.getElementById('progressBar');
+let progressTimer = null;
+
+function startProgress() {
+  let p = 0;
+  progressBar.classList.add('active');
+  progressBar.style.width = '0%';
+  clearInterval(progressTimer);
+  progressTimer = setInterval(() => {
+    p += Math.random() * 8 + 4;
+    if (p > 90) p = 90;
+    progressBar.style.width = p + '%';
+  }, 200);
+}
+
+function finishProgress() {
+  clearInterval(progressTimer);
+  progressBar.style.width = '100%';
+  setTimeout(() => {
+    progressBar.classList.remove('active');
+    progressBar.style.width = '0%';
+  }, 400);
+}
+
+/* ============================================================
+   ৩) স্টেট
+   ============================================================ */
+const state = {
+  activeView: 'dashboard',
+  isAdmin: false,
+  data: [],
+  clickedOnce: false,
+  lastClickedView: null,
+  isReset: false,
+  searchQuery: '',
+  dashboardCache: {},
+  sheetNames: {
+    dashboard: 'ড্যাশবোর্ড',
+    board:     'পরিচালনা পর্ষদ',
+    allotment: 'বাসা বরাদ্দ',
+    fees:      'মাসিক ফি',
+    expenses:  'খরচ'
+  },
+  titles: {
+    dashboard: '',
+    board:     'সমাজ কল্যাণ পরিষদ',
+    allotment: 'বরাদ্দ প্রাপ্ত বাসার পরিচিতি',
+    fees:      'মাসিক সমাজ কল্যাণ ফি',
+    expenses:  'খরচের সারসংক্ষেপ'
+  }
+};
+
+/* ============================================================
+   ৪) API
+   ============================================================ */
+async function apiGet(sheetName) {
+  try {
+    const res = await fetch(
+      `${CONFIG.API_URL}?action=read&sheet=${encodeURIComponent(sheetName)}`
+    );
+    const json = await res.json();
+    return json.data || [];
+  } catch (err) { console.error('API Get Error:', err); return []; }
+}
+
+async function apiSave(sheetName, values) {
+  try {
+    const res = await fetch(CONFIG.API_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({
+        action: 'write',
+        password: CONFIG.ADMIN_PASSWORD,
+        sheet: sheetName,
+        values: values
+      })
+    });
+    const json = await res.json();
+    console.log('Save response:', json);
+    return json.success === true;
+  } catch (err) {
+    console.error('API Save Error:', err);
+    return false;
+  }
+}
+
+/* ============================================================
+   ৫) হেল্পার
+   ============================================================ */
+const contentArea = document.getElementById('contentArea');
+const pageTitle   = document.getElementById('pageTitle');
+
+function escapeHtml(str) {
+  if (str === undefined || str === null) return '';
+  return String(str)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+function searchBoxHTML(placeholder) {
+  return `
+    <div class="search-box">
+      <input type="text" id="searchInput"
+             placeholder="${placeholder || 'সার্চ করুন...'}"
+             value="${escapeHtml(state.searchQuery)}"
+             oninput="handleSearch(this.value)">
+      <button class="clear-btn ${state.searchQuery ? 'show' : ''}"
+              onclick="clearSearch()">✕</button>
+    </div>
+  `;
+}
+
+function adminActionsHTML(view, addLabel) {
+  if (!state.isAdmin) return '';
+  return `
+    <div class="admin-actions">
+      <button class="btn-add" onclick="addRow('${view}')">${addLabel}</button>
+      <button class="btn-save" style="margin-top:0;" onclick="saveData('${view}')">💾 সেভ করুন</button>
+    </div>
+  `;
+}
+
+function filterRows(data) {
+  if (!state.searchQuery) return data;
+  const q = state.searchQuery.toLowerCase().trim();
+  return data.filter((row, i) => {
+    if (i === 0) return true;
+    return row.some(cell =>
+      String(cell || '').toLowerCase().includes(q)
+    );
+  });
+}
+
+function emptyCheck(data, view) {
+  if (!data || !data.length) {
+    if (state.clickedOnce) {
+      let html = '<div class="empty">কোনো তথ্য পাওয়া যায়নি।</div>';
+      if (state.isAdmin && view) {
+        html += `<div class="admin-actions" style="justify-content:center;">
+          <button class="btn-add" onclick="addRow('${view}')">+ নতুন এন্ট্রি</button>
+          <button class="btn-save" style="margin-top:0;" onclick="saveData('${view}')">💾 সেভ করুন</button>
+        </div>`;
+      }
+      return html;
+    }
+    return '';
+  }
+  return null;
+}
+
+function getTableHTML(view) {
+  if (view === 'expenses') {
+    return `<table>
+      <thead><tr><th>#</th><th>তারিখ</th><th>বিবরণ</th><th>পরিমাণ (৳)</th></tr></thead>
+      <tbody></tbody>
+    </table>`;
+  }
+  if (view === 'board') {
+    return `<table>
+      <thead><tr><th>#</th><th>নাম</th><th>পদবি</th><th>মোবাইল</th></tr></thead>
+      <tbody></tbody>
+    </table>`;
+  }
+  if (view === 'allotment') {
+    return `<table>
+      <thead><tr><th>#</th><th>নাম</th><th>বাসা নং</th></tr></thead>
+      <tbody></tbody>
+    </table>`;
+  }
+  if (view === 'fees') {
+    const months = ['জানুয়ারি','ফেব্রুয়ারি','মার্চ','এপ্রিল','মে','জুন',
+                    'জুলাই','আগস্ট','সেপ্টেম্বর','অক্টোবর','নভেম্বর','ডিসেম্বর'];
+    let head = '<th>নাম</th>';
+    months.forEach(m => head += `<th>${m}</th>`);
+    return `<table><thead><tr>${head}</tr></thead><tbody></tbody></table>`;
+  }
+  return '';
+}
+
+/* ============================================================
+   ৬) ড্যাশবোর্ড
+   ============================================================ */
+async function renderDashboard() {
+  startProgress();
+  contentArea.innerHTML = '<div class="empty">লোড হচ্ছে...</div>';
+
+  const [board, allotment, fees, expenses] = await Promise.all([
+    apiGet(state.sheetNames.board),
+    apiGet(state.sheetNames.allotment),
+    apiGet(state.sheetNames.fees),
+    apiGet(state.sheetNames.expenses)
+  ]);
+
+  if (state.isReset) { finishProgress(); return; }
+
+  state.dashboardCache = { board, allotment, fees, expenses };
+
+  const totalMembers  = Math.max(0, board.length - 1);
+  const totalHouses   = Math.max(0, allotment.length - 1);
+  const totalExpense  = expenses.slice(1).reduce((sum, r) => sum + (parseFloat(r[2]) || 0), 0);
+
+  const monthNames = ['জানুয়ারি','ফেব্রুয়ারি','মার্চ','এপ্রিল','মে','জুন',
+                      'জুলাই','আগস্ট','সেপ্টেম্বর','অক্টোবর','নভেম্বর','ডিসেম্বর'];
+  const currentMonth = new Date().getMonth();
+  const monthName = monthNames[currentMonth];
+  const monthColIndex = currentMonth + 1;
+
+  let monthCollected = 0, monthPaidCount = 0, monthTotalCount = 0;
+  fees.slice(1).forEach(row => {
+    monthTotalCount++;
+    const val = parseFloat(row[monthColIndex]);
+    if (!isNaN(val) && val > 0) {
+      monthCollected += val;
+      monthPaidCount++;
+    }
+  });
+
+  const balance = monthCollected - totalExpense;
+
+  let html = '<div class="dash-scroll">';
+
+  html += '<div class="dash-grid">';
+
+  html += `<div class="dash-card cyan">
+    <span class="icon">👥</span>
+    <div class="label">মোট সদস্য</div>
+    <div class="value">${totalMembers}<span class="unit">জন</span></div>
+  </div>`;
+
+  html += `<div class="dash-card blue">
+    <span class="icon">🏠</span>
+    <div class="label">মোট বাসা বরাদ্দ</div>
+    <div class="value">${totalHouses}<span class="unit">টি</span></div>
+  </div>`;
+
+  html += `<div class="dash-card green">
+    <span class="icon">💰</span>
+    <div class="label">${monthName} মাসে আদায়</div>
+    <div class="value">৳ ${monthCollected.toLocaleString('bn-BD')}</div>
+  </div>`;
+
+  html += `<div class="dash-card orange">
+    <span class="icon">📊</span>
+    <div class="label">${monthName} মাসে পরিশোধ</div>
+    <div class="value">${monthPaidCount}<span class="unit">/${monthTotalCount} জন</span></div>
+  </div>`;
+
+  html += `<div class="dash-card red">
+    <span class="icon">💸</span>
+    <div class="label">মোট খরচ</div>
+    <div class="value">৳ ${totalExpense.toLocaleString('bn-BD')}</div>
+  </div>`;
+
+  const balanceColor = balance >= 0 ? 'green' : 'red';
+  html += `<div class="dash-card ${balanceColor}">
+    <span class="icon">${balance >= 0 ? '✅' : '⚠️'}</span>
+    <div class="label">ব্যালেন্স</div>
+    <div class="value">৳ ${balance.toLocaleString('bn-BD')}</div>
+  </div>`;
+
+  html += '</div>';
+
+  html += '<div class="dash-section-title">দ্রুত অ্যাক্সেস</div>';
+  html += '<div class="quick-links">';
+  html += `<button class="quick-link" onclick="gotoView('board')">
+    <span class="ql-icon">📋</span><span class="ql-text">পরিচালনা পর্ষদ</span>
+  </button>`;
+  html += `<button class="quick-link" onclick="gotoView('allotment')">
+    <span class="ql-icon">🏘️</span><span class="ql-text">বরাদ্দ প্রাপ্ত বাসা</span>
+  </button>`;
+  html += `<button class="quick-link" onclick="gotoView('fees')">
+    <span class="ql-icon">💵</span><span class="ql-text">মাসিক ফি তালিকা</span>
+  </button>`;
+  html += `<button class="quick-link" onclick="gotoView('expenses')">
+    <span class="ql-icon">🧾</span><span class="ql-text">খরচের সারসংক্ষেপ</span>
+  </button>`;
+  html += '</div>';
+
+  html += '</div>';   /* dash-scroll বন্ধ */
+
+  contentArea.innerHTML = html;
+  finishProgress();
+}
+
+window.gotoView = function(view) {
+  state.isReset = false;
+  state.searchQuery = '';
+  state.activeView = view;
+  state.clickedOnce = true;
+  state.lastClickedView = view;
+
+  document.querySelectorAll('.sidebar nav button').forEach(b => {
+    b.classList.toggle('active', b.dataset.view === view);
+  });
+
+  loadView();
+};
+
+/* ============================================================
+   ৭) সার্চ হ্যান্ডলার (ফোকাস + স্ক্রল ফিক্স)
+   ============================================================ */
+window.handleSearch = function(value) {
+  state.searchQuery = value;
+
+  const clearBtn = document.querySelector('.search-box .clear-btn');
+  if (clearBtn) clearBtn.classList.toggle('show', !!value);
+
+  const input = document.getElementById('searchInput');
+  const cursorPos = input ? input.selectionStart : 0;
+
+  const oldScroll = contentArea.querySelector('.table-scroll');
+  const scrollTop = oldScroll ? oldScroll.scrollTop : 0;
+
+  renderCurrentView();
+
+  const newInput = document.getElementById('searchInput');
+  if (newInput) {
+    newInput.focus();
+    try { newInput.setSelectionRange(cursorPos, cursorPos); } catch(e) {}
+  }
+
+  const newScroll = contentArea.querySelector('.table-scroll');
+  if (newScroll) newScroll.scrollTop = scrollTop;
+};
+
+window.clearSearch = function() {
+  state.searchQuery = '';
+  renderCurrentView();
+  const newInput = document.getElementById('searchInput');
+  if (newInput) newInput.focus();
+};
+
+/* ============================================================
+   ৮) রেন্ডার ফাংশন
+   ============================================================ */
+function renderBoard(data) {
+  const empty = emptyCheck(data, 'board');
+  if (empty !== null) return empty;
+
+  const filtered = filterRows(data);
+
+  let html = '<h2>পরিচালনা পর্ষদের সদস্যবৃন্দ</h2>';
+  html += searchBoxHTML('নাম, পদবি বা মোবাইল দিয়ে খুঁজুন...');
+  html += adminActionsHTML('board', '+ নতুন সদস্য');
+
+  if (filtered.length <= 1) {
+    html += '<div class="no-result">🔍 কোনো ফলাফল পাওয়া যায়নি</div>';
+    return html;
+  }
+
+  html += '<div class="table-scroll">';
+  html += '<table><thead><tr><th>#</th><th>নাম</th><th>পদবি</th><th>মোবাইল</th></tr></thead><tbody>';
+  filtered.forEach((row, i) => {
+    if (i === 0) return;
+    const origIndex = data.indexOf(row);
+    html += '<tr>';
+    html += `<td>${origIndex}</td>`;
+    if (state.isAdmin) {
+      html += `<td><input type="text" data-r="${origIndex}" data-c="0" value="${escapeHtml(row[0])}"></td>`;
+      html += `<td><input type="text" data-r="${origIndex}" data-c="1" value="${escapeHtml(row[1])}"></td>`;
+      html += `<td><input type="text" data-r="${origIndex}" data-c="2" value="${escapeHtml(row[2])}"></td>`;
+    } else {
+      html += `<td>${escapeHtml(row[0])}</td>`;
+      html += `<td>${escapeHtml(row[1])}</td>`;
+      html += `<td>${escapeHtml(row[2])}</td>`;
+    }
+    html += '</tr>';
+  });
+  html += '</tbody></table>';
+  html += '</div>';
+  return html;
+}
+
+function renderAllotment(data) {
+  const empty = emptyCheck(data, 'allotment');
+  if (empty !== null) return empty;
+
+  const filtered = filterRows(data);
+
+  let html = '<h2>বরাদ্দ প্রাপ্ত বাসার তালিকা</h2>';
+  html += searchBoxHTML('নাম বা বাসা নং দিয়ে খুঁজুন...');
+  html += adminActionsHTML('allotment', '+ নতুন বরাদ্দ');
+
+  if (filtered.length <= 1) {
+    html += '<div class="no-result">🔍 কোনো ফলাফল পাওয়া যায়নি</div>';
+    return html;
+  }
+
+  html += '<div class="table-scroll">';
+  html += '<table><thead><tr><th>#</th><th>নাম</th><th>বাসা নং</th></tr></thead><tbody>';
+  filtered.forEach((row, i) => {
+    if (i === 0) return;
+    const origIndex = data.indexOf(row);
+    html += '<tr>';
+    html += `<td>${origIndex}</td>`;
+    if (state.isAdmin) {
+      html += `<td><input type="text" data-r="${origIndex}" data-c="0" value="${escapeHtml(row[0])}"></td>`;
+      html += `<td><input type="text" data-r="${origIndex}" data-c="1" value="${escapeHtml(row[1])}"></td>`;
+    } else {
+      html += `<td>${escapeHtml(row[0])}</td>`;
+      html += `<td>${escapeHtml(row[1])}</td>`;
+    }
+    html += '</tr>';
+  });
+  html += '</tbody></table>';
+  html += '</div>';
+  return html;
+}
+
+function renderFees(data) {
+  const empty = emptyCheck(data, 'fees');
+  if (empty !== null) return empty;
+
+  const filtered = filterRows(data);
+  const months = ['জানুয়ারি','ফেব্রুয়ারি','মার্চ','এপ্রিল','মে','জুন',
+                  'জুলাই','আগস্ট','সেপ্টেম্বর','অক্টোবর','নভেম্বর','ডিসেম্বর'];
+
+  let html = '<h2>মাসিক সমাজ কল্যাণ ফি তালিকা</h2>';
+  html += searchBoxHTML('নাম দিয়ে খুঁজুন...');
+  html += adminActionsHTML('fees', '+ নতুন সদস্য');
+
+  if (filtered.length <= 1) {
+    html += '<div class="no-result">🔍 কোনো ফলাফল পাওয়া যায়নি</div>';
+    return html;
+  }
+
+  html += '<div class="table-scroll">';
+  html += '<table><thead><tr><th>নাম</th>';
+  months.forEach(m => html += `<th>${m}</th>`);
+  html += '</tr></thead><tbody>';
+
+  filtered.forEach((row, i) => {
+    if (i === 0) return;
+    const origIndex = data.indexOf(row);
+    html += '<tr>';
+    if (state.isAdmin) {
+      html += `<td><input type="text" data-r="${origIndex}" data-c="0" value="${escapeHtml(row[0])}" style="min-width:120px;"></td>`;
+      for (let c = 1; c <= 12; c++) {
+        const val = row[c] || '';
+        html += `<td><input type="text" data-r="${origIndex}" data-c="${c}" value="${escapeHtml(val)}" style="width:60px;text-align:center;"></td>`;
+      }
+    } else {
+      html += `<td><strong>${escapeHtml(row[0])}</strong></td>`;
+      for (let c = 1; c <= 12; c++) {
+        const val = (row[c] || '').toString().trim();
+        if (val && val !== '0' && val !== '-') html += `<td class="paid">${escapeHtml(val)}</td>`;
+        else html += `<td class="unpaid">—</td>`;
+      }
+    }
+    html += '</tr>';
+  });
+  html += '</tbody></table>';
+  html += '</div>';
+  return html;
+}
+
+function renderExpenses(data) {
+  const empty = emptyCheck(data, 'expenses');
+  if (empty !== null) return empty;
+
+  const filtered = filterRows(data);
+
+  let html = '<h2>খরচের সারসংক্ষেপ</h2>';
+  html += searchBoxHTML('তারিখ বা বিবরণ দিয়ে খুঁজুন...');
+  html += adminActionsHTML('expenses', '+ নতুন খরচ');
+
+  if (filtered.length <= 1) {
+    html += '<div class="no-result">🔍 কোনো ফলাফল পাওয়া যায়নি</div>';
+    return html;
+  }
+
+  html += '<div class="table-scroll">';
+  html += '<table><thead><tr><th>#</th><th>তারিখ</th><th>বিবরণ</th><th>পরিমাণ (৳)</th></tr></thead><tbody>';
+  let total = 0;
+  filtered.forEach((row, i) => {
+    if (i === 0) return;
+    const origIndex = data.indexOf(row);
+    html += '<tr>';
+    html += `<td>${origIndex}</td>`;
+    if (state.isAdmin) {
+      html += `<td><input type="text" data-r="${origIndex}" data-c="0" value="${escapeHtml(row[0])}"></td>`;
+      html += `<td><input type="text" data-r="${origIndex}" data-c="1" value="${escapeHtml(row[1])}"></td>`;
+      html += `<td><input type="number" data-r="${origIndex}" data-c="2" value="${escapeHtml(row[2])}"></td>`;
+    } else {
+      html += `<td>${escapeHtml(row[0])}</td>`;
+      html += `<td>${escapeHtml(row[1])}</td>`;
+      html += `<td style="text-align:right;">${escapeHtml(row[2])}</td>`;
+    }
+    html += '</tr>';
+    total += parseFloat(row[2]) || 0;
+  });
+  html += `<tr style="background:#eaf0f6;font-weight:700;">
+             <td colspan="3" style="text-align:right;">মোট খরচ:</td>
+             <td style="text-align:right;">৳ ${total.toLocaleString('bn-BD')}</td>
+           </tr>`;
+  html += '</tbody></table>';
+  html += '</div>';
+  return html;
+}
+
+/* ============================================================
+   ৯) ভিউ লোড
+   ============================================================ */
+async function loadView() {
+  state.isReset = false;
+  contentArea.innerHTML = '';
+  pageTitle.textContent = state.titles[state.activeView];
+
+  startProgress();
+
+  if (state.activeView === 'dashboard') {
+    await renderDashboard();
+    return;
+  }
+
+  const raw = await apiGet(state.sheetNames[state.activeView]);
+  if (state.isReset) { finishProgress(); return; }
+  state.data = raw;
+  renderCurrentView();
+  finishProgress();
+}
+
+function renderCurrentView() {
+  if (state.isReset) {
+    contentArea.innerHTML = '';
+    return;
+  }
+
+  if (state.activeView === 'dashboard') {
+    renderDashboard();
+    return;
+  }
+
+  const raw = state.data;
+  let html = '';
+  if (state.activeView === 'board')     html = renderBoard(raw);
+  if (state.activeView === 'allotment') html = renderAllotment(raw);
+  if (state.activeView === 'fees')      html = renderFees(raw);
+  if (state.activeView === 'expenses')  html = renderExpenses(raw);
+  contentArea.innerHTML = html;
+}
+
+function resetToDefault() {
+  state.isReset          = true;
+  state.activeView       = 'dashboard';
+  state.clickedOnce      = false;
+  state.lastClickedView  = null;
+  state.data             = [];
+  state.searchQuery      = '';
+
+  pageTitle.textContent  = state.titles.dashboard;
+  contentArea.innerHTML  = '';
+
+  document.querySelectorAll('.sidebar nav button').forEach(b => {
+    b.classList.toggle('active', b.dataset.view === 'dashboard');
+  });
+
+  showWatermark();
+}
+
+/* ============================================================
+   ১০) এডিট / সেভ
+   ============================================================ */
+window.addRow = function(view) {
+  let table = contentArea.querySelector('table');
+  let tbody = contentArea.querySelector('tbody');
+
+  if (!table || !tbody) {
+    const nr = contentArea.querySelector('.no-result');
+    if (nr) nr.remove();
+    const em = contentArea.querySelector('.empty');
+    if (em && !em.textContent.includes('লোড হচ্ছে')) em.remove();
+
+    const tableHTML = getTableHTML(view);
+    if (!tableHTML) return;
+
+    let scroll = contentArea.querySelector('.table-scroll');
+    if (!scroll) {
+      scroll = document.createElement('div');
+      scroll.className = 'table-scroll';
+      contentArea.appendChild(scroll);
+    }
+
+    const temp = document.createElement('div');
+    temp.innerHTML = tableHTML;
+    scroll.appendChild(temp.firstElementChild);
+
+    table = scroll.querySelector('table');
+    tbody = scroll.querySelector('tbody');
+  }
+
+  if (!tbody) return;
+
+  const newIndex = state.data.length;
+  const tr = document.createElement('tr');
+
+  if (view === 'expenses') {
+    tr.innerHTML = `
+      <td>${newIndex}</td>
+      <td><input type="text" data-r="${newIndex}" data-c="0" value=""></td>
+      <td><input type="text" data-r="${newIndex}" data-c="1" value=""></td>
+      <td><input type="number" data-r="${newIndex}" data-c="2" value=""></td>
+    `;
+  } else if (view === 'board') {
+    tr.innerHTML = `
+      <td>${newIndex}</td>
+      <td><input type="text" data-r="${newIndex}" data-c="0" value=""></td>
+      <td><input type="text" data-r="${newIndex}" data-c="1" value=""></td>
+      <td><input type="text" data-r="${newIndex}" data-c="2" value=""></td>
+    `;
+  } else if (view === 'allotment') {
+    tr.innerHTML = `
+      <td>${newIndex}</td>
+      <td><input type="text" data-r="${newIndex}" data-c="0" value=""></td>
+      <td><input type="text" data-r="${newIndex}" data-c="1" value=""></td>
+    `;
+  } else if (view === 'fees') {
+    let row = `<td><input type="text" data-r="${newIndex}" data-c="0" value="" style="min-width:120px;"></td>`;
+    for (let c = 1; c <= 12; c++) {
+      row += `<td><input type="text" data-r="${newIndex}" data-c="${c}" value="" style="width:60px;text-align:center;"></td>`;
+    }
+    tr.innerHTML = row;
+  }
+
+  tbody.appendChild(tr);
+
+  /* স্ক্রল নিচে নাও */
+  const scroll = contentArea.querySelector('.table-scroll');
+  if (scroll) scroll.scrollTop = scroll.scrollHeight;
+
+  const firstInput = tr.querySelector('input');
+  if (firstInput) firstInput.focus();
+};
+
+window.saveData = async function(view) {
+  if (state.searchQuery) {
+    state.searchQuery = '';
+    const input = document.getElementById('searchInput');
+    if (input) input.value = '';
+  }
+
+  const inputs = contentArea.querySelectorAll('input[data-r]');
+  if (inputs.length === 0) {
+    alert('⚠️ সেভ করার জন্য কোনো ডেটা নেই।');
+    return;
+  }
+
+  const map = {};
+  inputs.forEach(inp => {
+    const r = parseInt(inp.dataset.r);
+    const c = parseInt(inp.dataset.c);
+    if (!map[r]) map[r] = [];
+    map[r][c] = inp.value;
+  });
+
+  const header = state.data[0] || [];
+  const newData = [header];
+  const rowKeys = Object.keys(map).map(Number).sort((a, b) => a - b);
+
+  rowKeys.forEach(r => {
+    const arr = [];
+    const maxC = Math.max.apply(null, Object.keys(map[r]).map(Number));
+    for (let c = 0; c <= maxC; c++) {
+      arr[c] = map[r][c] !== undefined ? map[r][c] : '';
+    }
+    newData.push(arr);
+  });
+
+  startProgress();
+  const ok = await apiSave(state.sheetNames[view], newData);
+  finishProgress();
+
+  if (ok) {
+    alert('✅ সফলভাবে সেভ হয়েছে!');
+    state.data = newData;
+    renderCurrentView();
+  } else {
+    alert('❌ সেভ করতে সমস্যা হয়েছে।\n\nসম্ভাব্য কারণ:\n১. Apps Script নতুন version deploy করা হয়নি\n২. ADMIN_PASSWORD ভুল\n৩. API_URL ভুল\n\nF12 চেপে Console দেখুন।');
+  }
+};
+
+/* ============================================================
+   ১১) সাইডবার + ওয়াটারমার্ক
+   ============================================================ */
+const sidebar         = document.getElementById('sidebar');
+const sidebarOverlay  = document.getElementById('sidebarOverlay');
+const watermark       = document.getElementById('watermark');
+
+function showWatermark() { watermark.classList.remove('hide'); }
+function hideWatermark() { watermark.classList.add('hide'); }
+
+function openSidebar() {
+  sidebar.classList.add('open');
+  sidebarOverlay.classList.add('show');
+  hideWatermark();
+  resetToDefault();
+  hideWatermark();
+}
+
+function closeSidebar(showText = true) {
+  sidebar.classList.remove('open');
+  sidebarOverlay.classList.remove('show');
+  if (showText) showWatermark();
+}
+
+/* ============================================================
+   ১২) মেন্যু ক্লিক
+   ============================================================ */
+document.querySelectorAll('.sidebar nav button').forEach(btn => {
+  btn.addEventListener('click', () => {
+    if (state.isAdmin && !confirm('এডিট মোড থেকে বের হচ্ছেন, অসংরক্ষিত পরিবর্তন হারিয়ে যাবে। ঠিক আছে?')) return;
+
+    state.isReset = false;
+    state.searchQuery = '';
+    const clickedView = btn.dataset.view;
+    state.clickedOnce     = true;
+    state.lastClickedView = clickedView;
+
+    document.querySelectorAll('.sidebar nav button').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+
+    if (window.innerWidth <= 768) closeSidebar(false);
+
+    if (state.activeView !== clickedView) {
+      state.activeView = clickedView;
+      loadView();
+    } else {
+      renderCurrentView();
+    }
+  });
+});
+
+/* ============================================================
+   ১৩) হ্যামবার্গার
+   ============================================================ */
+document.getElementById('hamburger').addEventListener('click', () => {
+  if (sidebar.classList.contains('open')) {
+    closeSidebar(false);
+  } else {
+    openSidebar();
+  }
+});
+
+sidebarOverlay.addEventListener('click',      () => closeSidebar(true));
+sidebarOverlay.addEventListener('touchstart', () => closeSidebar(true));
+
+/* ============================================================
+   ১৪) এডমিন মডাল
+   ============================================================ */
+const modalOverlay  = document.getElementById('modalOverlay');
+const passwordInput = document.getElementById('passwordInput');
+const modalError    = document.getElementById('modalError');
+
+document.getElementById('adminBtn').addEventListener('click', () => {
+  if (state.isAdmin) {
+    state.isAdmin = false;
+    document.getElementById('adminBtn').textContent = '🔒 এডমিন লগইন';
+    document.getElementById('adminBtn').classList.remove('logout');
+    loadView();
+  } else {
+    modalOverlay.classList.add('show');
+    passwordInput.value = '';
+    modalError.style.display = 'none';
+    setTimeout(() => passwordInput.focus(), 100);
+  }
+});
+
+document.getElementById('modalCancel').addEventListener('click', () => modalOverlay.classList.remove('show'));
+document.getElementById('modalOk').addEventListener('click', doLogin);
+passwordInput.addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
+
+function doLogin() {
+  if (passwordInput.value === CONFIG.ADMIN_PASSWORD) {
+    state.isAdmin = true;
+    modalOverlay.classList.remove('show');
+    document.getElementById('adminBtn').textContent = '🚪 লগআউট';
+    document.getElementById('adminBtn').classList.add('logout');
+    loadView();
+  } else {
+    modalError.style.display = 'block';
+    passwordInput.value = '';
+    passwordInput.focus();
+  }
+}
+
+/* ============================================================
+   ১৫) প্রাথমিক লোড
+   ============================================================ */
+resetToDefault();
+loadView();
+</script>
+</body>
+</html>
