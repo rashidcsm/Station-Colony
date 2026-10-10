@@ -251,10 +251,9 @@
   }
   .no-result {
     text-align: center; padding: 30px;
-    color: rgba(255, 255, 255, 0.95);
+    color: #999;
     font-style: italic; font-size: 16px;
-    text-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
-    flex-shrink: 0;
+    background: #ffffff;
   }
 
   .dash-scroll {
@@ -414,7 +413,6 @@
 </head>
 <body>
 
-<!-- ✅ ব্যাকগ্রাউন্ড ছবি -->
 <div class="bg-image" id="bgImage"></div>
 
 <div id="progressBar"></div>
@@ -424,9 +422,9 @@
 <aside class="sidebar" id="sidebar">
   <div class="logo-box">
     <img id="logoImg"
-         src="https://res.cloudinary.com/wasi/image/upload/v1791534156/StnColonylogo.png"
+         src="https://res.cloudinary.com/wasi/image/upload/v1791532657/StnColonyWallpaper.jpg"
          alt="Logo"
-         onerror="this.src='https://via.placeholder.com/90?text=Logo'">
+         onerror="this.onerror=null; this.src='https://via.placeholder.com/90?text=Logo';">
     <h2>রেলওয়ে স্টেশন কলোনী<br>সমাজ কল্যাণ পরিষদ<br>আইস ফেক্টরী রোড<br>৩০ নং ওয়ার্ড</h2>
   </div>
   <nav>
@@ -435,6 +433,7 @@
     <button data-view="allotment">খ. বরাদ্দ প্রাপ্ত বাসার পরিচিতি</button>
     <button data-view="fees">গ. মাসিক সমাজ কল্যাণ ফি</button>
     <button data-view="expenses">ঘ. খরচের সারসংক্ষেপ</button>
+    <button data-view="due">ঙ. বাকি তালিকা</button>
   </nav>
   <button class="admin-btn" id="adminBtn">🔒 এডমিন লগইন</button>
 </aside>
@@ -469,7 +468,8 @@
 const CONFIG = {
   API_URL: 'https://script.google.com/macros/s/AKfycbzjqvrfHAuTAHBdFzBq2qzu4yqxxlj6J14QJa4bhUGtx3gCG7x8ldYwtDXQ9qpPYWEg/exec',
   ADMIN_PASSWORD: 'wasi',
-  LOGO_URL: 'https://res.cloudinary.com/wasi/image/upload/v1791534156/StnColonylogo.png'
+  LOGO_URL: 'https://res.cloudinary.com/wasi/image/upload/v1791532657/StnColonyWallpaper.jpg',
+  MONTHLY_FEE: 300           /* ← প্রতি মাসের ফি এখানে বদলান */
 };
 
 document.getElementById('logoImg').src = CONFIG.LOGO_URL;
@@ -518,14 +518,16 @@ const state = {
     board:     'পরিচালনা পর্ষদ',
     allotment: 'বাসা বরাদ্দ',
     fees:      'মাসিক ফি',
-    expenses:  'খরচ'
+    expenses:  'খরচ',
+    due:       'বাকি তালিকা'
   },
   titles: {
     dashboard: '',
     board:     'সমাজ কল্যাণ পরিষদ',
     allotment: 'বরাদ্দ প্রাপ্ত বাসার পরিচিতি',
     fees:      'মাসিক সমাজ কল্যাণ ফি',
-    expenses:  'খরচের সারসংক্ষেপ'
+    expenses:  'খরচের সারসংক্ষেপ',
+    due:       'বাকি তালিকা'
   }
 };
 
@@ -714,13 +716,13 @@ async function renderDashboard() {
 
   html += `<div class="dash-card green">
     <span class="icon">💰</span>
-    <div class="label">${monthName} মাসে আদায়</div>
+    <div class="label">${monthName} মাসিক আদায়</div>
     <div class="value">৳ ${monthCollected.toLocaleString('bn-BD')}</div>
   </div>`;
 
   html += `<div class="dash-card orange">
     <span class="icon">📊</span>
-    <div class="label">${monthName} মাসে পরিশোধ</div>
+    <div class="label">${monthName} মাসিক পরিশোধ</div>
     <div class="value">${monthPaidCount}<span class="unit">/${monthTotalCount} জন</span></div>
   </div>`;
 
@@ -753,6 +755,9 @@ async function renderDashboard() {
   html += `<button class="quick-link" onclick="gotoView('expenses')">
     <span class="ql-icon">🧾</span><span class="ql-text">খরচের সারসংক্ষেপ</span>
   </button>`;
+  html += `<button class="quick-link" onclick="gotoView('due')">
+    <span class="ql-icon">🔔</span><span class="ql-text">বাকি তালিকা</span>
+  </button>`;
   html += '</div>';
 
   html += '</div>';
@@ -778,7 +783,110 @@ window.gotoView = function(view) {
 };
 
 /* ============================================================
-   ৭) সার্চ হ্যান্ডলার
+   ৬.৫) 🔔 বাকি তালিকা (Due Reminder)
+   ============================================================ */
+async function renderDue() {
+  startProgress();
+  contentArea.innerHTML = '<div class="empty">লোড হচ্ছে...</div>';
+
+  const [allotment, fees] = await Promise.all([
+    apiGet(state.sheetNames.allotment),
+    apiGet(state.sheetNames.fees)
+  ]);
+
+  if (state.isReset) { finishProgress(); return; }
+
+  /* এই মাস */
+  const monthNames = ['জানুয়ারি','ফেব্রুয়ারি','মার্চ','এপ্রিল','মে','জুন',
+                      'জুলাই','আগস্ট','সেপ্টেম্বর','অক্টোবর','নভেম্বর','ডিসেম্বর'];
+  const currentMonth = new Date().getMonth();
+  const monthName = monthNames[currentMonth];
+  const monthColIndex = currentMonth + 1;
+
+  /* নাম → বাসা নং ম্যাপ */
+  const houseMap = {};
+  allotment.slice(1).forEach(row => {
+    if (row[0]) houseMap[String(row[0]).trim()] = String(row[1] || '').trim();
+  });
+
+  /* যারা এই মাসে দেয়নি */
+  const dueList = [];
+  let totalDue = 0;
+  let paidCount = 0;
+
+  fees.slice(1).forEach(row => {
+    const name = String(row[0] || '').trim();
+    if (!name) return;
+
+    const val = parseFloat(row[monthColIndex]);
+    const paid = !isNaN(val) && val > 0;
+
+    if (!paid) {
+      dueList.push({
+        name: name,
+        house: houseMap[name] || '—'
+      });
+      totalDue += CONFIG.MONTHLY_FEE;
+    } else {
+      paidCount++;
+    }
+  });
+
+  const totalMembers = Math.max(0, fees.length - 1);
+
+  /* UI */
+  let html = '<h2>🔔 ' + monthName + ' মাসের বাকি তালিকা</h2>';
+
+  /* সারসংক্ষেপ কার্ড */
+  html += '<div class="dash-grid" style="margin-bottom:20px;">';
+
+  html += `<div class="dash-card red">
+    <span class="icon">⏳</span>
+    <div class="label">মোট বাকি সদস্য</div>
+    <div class="value">${dueList.length}<span class="unit">জন</span></div>
+  </div>`;
+
+  html += `<div class="dash-card orange">
+    <span class="icon">💰</span>
+    <div class="label">মোট বাকি টাকা</div>
+    <div class="value">৳ ${totalDue.toLocaleString('bn-BD')}</div>
+  </div>`;
+
+  html += `<div class="dash-card green">
+    <span class="icon">✅</span>
+    <div class="label">পরিশোধ করেছে</div>
+    <div class="value">${paidCount}<span class="unit">/${totalMembers} জন</span></div>
+  </div>`;
+
+  html += '</div>';
+
+  /* তালিকা */
+  if (dueList.length === 0) {
+    html += '<div class="empty" style="color:#fff;font-style:normal;font-size:18px;">🎉 এই মাসে সবাই ফি পরিশোধ করেছে!</div>';
+    contentArea.innerHTML = html;
+    finishProgress();
+    return;
+  }
+
+  html += '<div class="table-scroll"><table>';
+  html += '<thead><tr><th>#</th><th>নাম</th><th>বাসা নং</th><th>মাস</th><th>স্ট্যাটাস</th></tr></thead><tbody>';
+  dueList.forEach((d, i) => {
+    html += '<tr>';
+    html += `<td>${i + 1}</td>`;
+    html += `<td>${escapeHtml(d.name)}</td>`;
+    html += `<td>${escapeHtml(d.house)}</td>`;
+    html += `<td>${monthName}</td>`;
+    html += `<td style="text-align:center;color:#c0392b;font-weight:600;">বাকি ৳ ${CONFIG.MONTHLY_FEE}</td>`;
+    html += '</tr>';
+  });
+  html += '</tbody></table></div>';
+
+  contentArea.innerHTML = html;
+  finishProgress();
+}
+
+/* ============================================================
+   ৭) সার্চ হ্যান্ডলার — শুধু tbody আপডেট (IME-safe)
    ============================================================ */
 window.handleSearch = function(value) {
   state.searchQuery = value;
@@ -786,30 +894,134 @@ window.handleSearch = function(value) {
   const clearBtn = document.querySelector('.search-box .clear-btn');
   if (clearBtn) clearBtn.classList.toggle('show', !!value);
 
-  const input = document.getElementById('searchInput');
-  const cursorPos = input ? input.selectionStart : 0;
-
-  const oldScroll = contentArea.querySelector('.table-scroll');
-  const scrollTop = oldScroll ? oldScroll.scrollTop : 0;
-
-  renderCurrentView();
-
-  const newInput = document.getElementById('searchInput');
-  if (newInput) {
-    newInput.focus();
-    try { newInput.setSelectionRange(cursorPos, cursorPos); } catch(e) {}
-  }
-
-  const newScroll = contentArea.querySelector('.table-scroll');
-  if (newScroll) newScroll.scrollTop = scrollTop;
+  updateCurrentRows();
 };
 
 window.clearSearch = function() {
   state.searchQuery = '';
-  renderCurrentView();
-  const newInput = document.getElementById('searchInput');
-  if (newInput) newInput.focus();
+
+  const input = document.getElementById('searchInput');
+  if (input) {
+    input.value = '';
+    input.focus();
+  }
+
+  const clearBtn = document.querySelector('.search-box .clear-btn');
+  if (clearBtn) clearBtn.classList.remove('show');
+
+  updateCurrentRows();
 };
+
+/* ✅ শুধু tbody আপডেট করে — ইনপুট ও ফোকাস অটুট থাকে */
+function updateCurrentRows() {
+  const tbody = contentArea.querySelector('tbody');
+  if (!tbody) return;
+
+  const filtered = filterRows(state.data);
+  let rowsHTML = '';
+
+  if (state.activeView === 'board') {
+    if (filtered.length <= 1) {
+      tbody.innerHTML = `<tr><td colspan="4" class="no-result">🔍 কোনো ফলাফল পাওয়া যায়নি</td></tr>`;
+      return;
+    }
+    filtered.forEach((row, i) => {
+      if (i === 0) return;
+      const origIndex = state.data.indexOf(row);
+      rowsHTML += '<tr>';
+      rowsHTML += `<td>${origIndex}</td>`;
+      if (state.isAdmin) {
+        rowsHTML += `<td><input type="text" data-r="${origIndex}" data-c="0" value="${escapeHtml(row[0])}"></td>`;
+        rowsHTML += `<td><input type="text" data-r="${origIndex}" data-c="1" value="${escapeHtml(row[1])}"></td>`;
+        rowsHTML += `<td><input type="text" data-r="${origIndex}" data-c="2" value="${escapeHtml(row[2])}"></td>`;
+      } else {
+        rowsHTML += `<td>${escapeHtml(row[0])}</td>`;
+        rowsHTML += `<td>${escapeHtml(row[1])}</td>`;
+        rowsHTML += `<td>${escapeHtml(row[2])}</td>`;
+      }
+      rowsHTML += '</tr>';
+    });
+  }
+
+  else if (state.activeView === 'allotment') {
+    if (filtered.length <= 1) {
+      tbody.innerHTML = `<tr><td colspan="3" class="no-result">🔍 কোনো ফলাফল পাওয়া যায়নি</td></tr>`;
+      return;
+    }
+    filtered.forEach((row, i) => {
+      if (i === 0) return;
+      const origIndex = state.data.indexOf(row);
+      rowsHTML += '<tr>';
+      rowsHTML += `<td>${origIndex}</td>`;
+      if (state.isAdmin) {
+        rowsHTML += `<td><input type="text" data-r="${origIndex}" data-c="0" value="${escapeHtml(row[0])}"></td>`;
+        rowsHTML += `<td><input type="text" data-r="${origIndex}" data-c="1" value="${escapeHtml(row[1])}"></td>`;
+      } else {
+        rowsHTML += `<td>${escapeHtml(row[0])}</td>`;
+        rowsHTML += `<td>${escapeHtml(row[1])}</td>`;
+      }
+      rowsHTML += '</tr>';
+    });
+  }
+
+  else if (state.activeView === 'fees') {
+    if (filtered.length <= 1) {
+      tbody.innerHTML = `<tr><td colspan="13" class="no-result">🔍 কোনো ফলাফল পাওয়া যায়নি</td></tr>`;
+      return;
+    }
+    filtered.forEach((row, i) => {
+      if (i === 0) return;
+      const origIndex = state.data.indexOf(row);
+      rowsHTML += '<tr>';
+      if (state.isAdmin) {
+        rowsHTML += `<td><input type="text" data-r="${origIndex}" data-c="0" value="${escapeHtml(row[0])}" style="min-width:120px;"></td>`;
+        for (let c = 1; c <= 12; c++) {
+          const val = row[c] || '';
+          rowsHTML += `<td><input type="text" data-r="${origIndex}" data-c="${c}" value="${escapeHtml(val)}" style="width:60px;text-align:center;"></td>`;
+        }
+      } else {
+        rowsHTML += `<td><strong>${escapeHtml(row[0])}</strong></td>`;
+        for (let c = 1; c <= 12; c++) {
+          const val = (row[c] || '').toString().trim();
+          if (val && val !== '0' && val !== '-') rowsHTML += `<td class="paid">${escapeHtml(val)}</td>`;
+          else rowsHTML += `<td class="unpaid">—</td>`;
+        }
+      }
+      rowsHTML += '</tr>';
+    });
+  }
+
+  else if (state.activeView === 'expenses') {
+    if (filtered.length <= 1) {
+      tbody.innerHTML = `<tr><td colspan="4" class="no-result">🔍 কোনো ফলাফল পাওয়া যায়নি</td></tr>`;
+      return;
+    }
+    let total = 0;
+    filtered.forEach((row, i) => {
+      if (i === 0) return;
+      const origIndex = state.data.indexOf(row);
+      rowsHTML += '<tr>';
+      rowsHTML += `<td>${origIndex}</td>`;
+      if (state.isAdmin) {
+        rowsHTML += `<td><input type="text" data-r="${origIndex}" data-c="0" value="${escapeHtml(row[0])}"></td>`;
+        rowsHTML += `<td><input type="text" data-r="${origIndex}" data-c="1" value="${escapeHtml(row[1])}"></td>`;
+        rowsHTML += `<td><input type="number" data-r="${origIndex}" data-c="2" value="${escapeHtml(row[2])}"></td>`;
+      } else {
+        rowsHTML += `<td>${escapeHtml(row[0])}</td>`;
+        rowsHTML += `<td>${escapeHtml(row[1])}</td>`;
+        rowsHTML += `<td style="text-align:right;">${escapeHtml(row[2])}</td>`;
+      }
+      rowsHTML += '</tr>';
+      total += parseFloat(row[2]) || 0;
+    });
+    rowsHTML += `<tr style="background:#eaf0f6;font-weight:700;">
+      <td colspan="3" style="text-align:right;">মোট খরচ:</td>
+      <td style="text-align:right;">৳ ${total.toLocaleString('bn-BD')}</td>
+    </tr>`;
+  }
+
+  tbody.innerHTML = rowsHTML;
+}
 
 /* ============================================================
    ৮) রেন্ডার ফাংশন
@@ -818,35 +1030,34 @@ function renderBoard(data) {
   const empty = emptyCheck(data, 'board');
   if (empty !== null) return empty;
 
-  const filtered = filterRows(data);
-
   let html = '<h2>পরিচালনা পর্ষদের সদস্যবৃন্দ</h2>';
   html += searchBoxHTML('নাম, পদবি বা মোবাইল দিয়ে খুঁজুন...');
   html += adminActionsHTML('board', '+ নতুন সদস্য');
 
-  if (filtered.length <= 1) {
-    html += '<div class="no-result">🔍 কোনো ফলাফল পাওয়া যায়নি</div>';
-    return html;
-  }
-
   html += '<div class="table-scroll">';
   html += '<table><thead><tr><th>#</th><th>নাম</th><th>পদবি</th><th>মোবাইল</th></tr></thead><tbody>';
-  filtered.forEach((row, i) => {
-    if (i === 0) return;
-    const origIndex = data.indexOf(row);
-    html += '<tr>';
-    html += `<td>${origIndex}</td>`;
-    if (state.isAdmin) {
-      html += `<td><input type="text" data-r="${origIndex}" data-c="0" value="${escapeHtml(row[0])}"></td>`;
-      html += `<td><input type="text" data-r="${origIndex}" data-c="1" value="${escapeHtml(row[1])}"></td>`;
-      html += `<td><input type="text" data-r="${origIndex}" data-c="2" value="${escapeHtml(row[2])}"></td>`;
-    } else {
-      html += `<td>${escapeHtml(row[0])}</td>`;
-      html += `<td>${escapeHtml(row[1])}</td>`;
-      html += `<td>${escapeHtml(row[2])}</td>`;
-    }
-    html += '</tr>';
-  });
+
+  const filtered = filterRows(data);
+  if (filtered.length <= 1) {
+    html += '<tr><td colspan="4" class="no-result">🔍 কোনো ফলাফল পাওয়া যায়নি</td></tr>';
+  } else {
+    filtered.forEach((row, i) => {
+      if (i === 0) return;
+      const origIndex = data.indexOf(row);
+      html += '<tr>';
+      html += `<td>${origIndex}</td>`;
+      if (state.isAdmin) {
+        html += `<td><input type="text" data-r="${origIndex}" data-c="0" value="${escapeHtml(row[0])}"></td>`;
+        html += `<td><input type="text" data-r="${origIndex}" data-c="1" value="${escapeHtml(row[1])}"></td>`;
+        html += `<td><input type="text" data-r="${origIndex}" data-c="2" value="${escapeHtml(row[2])}"></td>`;
+      } else {
+        html += `<td>${escapeHtml(row[0])}</td>`;
+        html += `<td>${escapeHtml(row[1])}</td>`;
+        html += `<td>${escapeHtml(row[2])}</td>`;
+      }
+      html += '</tr>';
+    });
+  }
   html += '</tbody></table>';
   html += '</div>';
   return html;
@@ -856,33 +1067,32 @@ function renderAllotment(data) {
   const empty = emptyCheck(data, 'allotment');
   if (empty !== null) return empty;
 
-  const filtered = filterRows(data);
-
   let html = '<h2>বরাদ্দ প্রাপ্ত বাসার তালিকা</h2>';
   html += searchBoxHTML('নাম বা বাসা নং দিয়ে খুঁজুন...');
   html += adminActionsHTML('allotment', '+ নতুন বরাদ্দ');
 
-  if (filtered.length <= 1) {
-    html += '<div class="no-result">🔍 কোনো ফলাফল পাওয়া যায়নি</div>';
-    return html;
-  }
-
   html += '<div class="table-scroll">';
   html += '<table><thead><tr><th>#</th><th>নাম</th><th>বাসা নং</th></tr></thead><tbody>';
-  filtered.forEach((row, i) => {
-    if (i === 0) return;
-    const origIndex = data.indexOf(row);
-    html += '<tr>';
-    html += `<td>${origIndex}</td>`;
-    if (state.isAdmin) {
-      html += `<td><input type="text" data-r="${origIndex}" data-c="0" value="${escapeHtml(row[0])}"></td>`;
-      html += `<td><input type="text" data-r="${origIndex}" data-c="1" value="${escapeHtml(row[1])}"></td>`;
-    } else {
-      html += `<td>${escapeHtml(row[0])}</td>`;
-      html += `<td>${escapeHtml(row[1])}</td>`;
-    }
-    html += '</tr>';
-  });
+
+  const filtered = filterRows(data);
+  if (filtered.length <= 1) {
+    html += '<tr><td colspan="3" class="no-result">🔍 কোনো ফলাফল পাওয়া যায়নি</td></tr>';
+  } else {
+    filtered.forEach((row, i) => {
+      if (i === 0) return;
+      const origIndex = data.indexOf(row);
+      html += '<tr>';
+      html += `<td>${origIndex}</td>`;
+      if (state.isAdmin) {
+        html += `<td><input type="text" data-r="${origIndex}" data-c="0" value="${escapeHtml(row[0])}"></td>`;
+        html += `<td><input type="text" data-r="${origIndex}" data-c="1" value="${escapeHtml(row[1])}"></td>`;
+      } else {
+        html += `<td>${escapeHtml(row[0])}</td>`;
+        html += `<td>${escapeHtml(row[1])}</td>`;
+      }
+      html += '</tr>';
+    });
+  }
   html += '</tbody></table>';
   html += '</div>';
   return html;
@@ -892,7 +1102,6 @@ function renderFees(data) {
   const empty = emptyCheck(data, 'fees');
   if (empty !== null) return empty;
 
-  const filtered = filterRows(data);
   const months = ['জানুয়ারি','ফেব্রুয়ারি','মার্চ','এপ্রিল','মে','জুন',
                   'জুলাই','আগস্ট','সেপ্টেম্বর','অক্টোবর','নভেম্বর','ডিসেম্বর'];
 
@@ -900,36 +1109,36 @@ function renderFees(data) {
   html += searchBoxHTML('নাম দিয়ে খুঁজুন...');
   html += adminActionsHTML('fees', '+ নতুন সদস্য');
 
-  if (filtered.length <= 1) {
-    html += '<div class="no-result">🔍 কোনো ফলাফল পাওয়া যায়নি</div>';
-    return html;
-  }
-
   html += '<div class="table-scroll">';
   html += '<table><thead><tr><th>নাম</th>';
   months.forEach(m => html += `<th>${m}</th>`);
   html += '</tr></thead><tbody>';
 
-  filtered.forEach((row, i) => {
-    if (i === 0) return;
-    const origIndex = data.indexOf(row);
-    html += '<tr>';
-    if (state.isAdmin) {
-      html += `<td><input type="text" data-r="${origIndex}" data-c="0" value="${escapeHtml(row[0])}" style="min-width:120px;"></td>`;
-      for (let c = 1; c <= 12; c++) {
-        const val = row[c] || '';
-        html += `<td><input type="text" data-r="${origIndex}" data-c="${c}" value="${escapeHtml(val)}" style="width:60px;text-align:center;"></td>`;
+  const filtered = filterRows(data);
+  if (filtered.length <= 1) {
+    html += '<tr><td colspan="13" class="no-result">🔍 কোনো ফলাফল পাওয়া যায়নি</td></tr>';
+  } else {
+    filtered.forEach((row, i) => {
+      if (i === 0) return;
+      const origIndex = data.indexOf(row);
+      html += '<tr>';
+      if (state.isAdmin) {
+        html += `<td><input type="text" data-r="${origIndex}" data-c="0" value="${escapeHtml(row[0])}" style="min-width:120px;"></td>`;
+        for (let c = 1; c <= 12; c++) {
+          const val = row[c] || '';
+          html += `<td><input type="text" data-r="${origIndex}" data-c="${c}" value="${escapeHtml(val)}" style="width:60px;text-align:center;"></td>`;
+        }
+      } else {
+        html += `<td><strong>${escapeHtml(row[0])}</strong></td>`;
+        for (let c = 1; c <= 12; c++) {
+          const val = (row[c] || '').toString().trim();
+          if (val && val !== '0' && val !== '-') html += `<td class="paid">${escapeHtml(val)}</td>`;
+          else html += `<td class="unpaid">—</td>`;
+        }
       }
-    } else {
-      html += `<td><strong>${escapeHtml(row[0])}</strong></td>`;
-      for (let c = 1; c <= 12; c++) {
-        const val = (row[c] || '').toString().trim();
-        if (val && val !== '0' && val !== '-') html += `<td class="paid">${escapeHtml(val)}</td>`;
-        else html += `<td class="unpaid">—</td>`;
-      }
-    }
-    html += '</tr>';
-  });
+      html += '</tr>';
+    });
+  }
   html += '</tbody></table>';
   html += '</div>';
   return html;
@@ -939,41 +1148,40 @@ function renderExpenses(data) {
   const empty = emptyCheck(data, 'expenses');
   if (empty !== null) return empty;
 
-  const filtered = filterRows(data);
-
   let html = '<h2>খরচের সারসংক্ষেপ</h2>';
   html += searchBoxHTML('তারিখ বা বিবরণ দিয়ে খুঁজুন...');
   html += adminActionsHTML('expenses', '+ নতুন খরচ');
 
-  if (filtered.length <= 1) {
-    html += '<div class="no-result">🔍 কোনো ফলাফল পাওয়া যায়নি</div>';
-    return html;
-  }
-
   html += '<div class="table-scroll">';
   html += '<table><thead><tr><th>#</th><th>তারিখ</th><th>বিবরণ</th><th>পরিমাণ (৳)</th></tr></thead><tbody>';
-  let total = 0;
-  filtered.forEach((row, i) => {
-    if (i === 0) return;
-    const origIndex = data.indexOf(row);
-    html += '<tr>';
-    html += `<td>${origIndex}</td>`;
-    if (state.isAdmin) {
-      html += `<td><input type="text" data-r="${origIndex}" data-c="0" value="${escapeHtml(row[0])}"></td>`;
-      html += `<td><input type="text" data-r="${origIndex}" data-c="1" value="${escapeHtml(row[1])}"></td>`;
-      html += `<td><input type="number" data-r="${origIndex}" data-c="2" value="${escapeHtml(row[2])}"></td>`;
-    } else {
-      html += `<td>${escapeHtml(row[0])}</td>`;
-      html += `<td>${escapeHtml(row[1])}</td>`;
-      html += `<td style="text-align:right;">${escapeHtml(row[2])}</td>`;
-    }
-    html += '</tr>';
-    total += parseFloat(row[2]) || 0;
-  });
-  html += `<tr style="background:#eaf0f6;font-weight:700;">
-             <td colspan="3" style="text-align:right;">মোট খরচ:</td>
-             <td style="text-align:right;">৳ ${total.toLocaleString('bn-BD')}</td>
-           </tr>`;
+
+  const filtered = filterRows(data);
+  if (filtered.length <= 1) {
+    html += '<tr><td colspan="4" class="no-result">🔍 কোনো ফলাফল পাওয়া যায়নি</td></tr>';
+  } else {
+    let total = 0;
+    filtered.forEach((row, i) => {
+      if (i === 0) return;
+      const origIndex = data.indexOf(row);
+      html += '<tr>';
+      html += `<td>${origIndex}</td>`;
+      if (state.isAdmin) {
+        html += `<td><input type="text" data-r="${origIndex}" data-c="0" value="${escapeHtml(row[0])}"></td>`;
+        html += `<td><input type="text" data-r="${origIndex}" data-c="1" value="${escapeHtml(row[1])}"></td>`;
+        html += `<td><input type="number" data-r="${origIndex}" data-c="2" value="${escapeHtml(row[2])}"></td>`;
+      } else {
+        html += `<td>${escapeHtml(row[0])}</td>`;
+        html += `<td>${escapeHtml(row[1])}</td>`;
+        html += `<td style="text-align:right;">${escapeHtml(row[2])}</td>`;
+      }
+      html += '</tr>';
+      total += parseFloat(row[2]) || 0;
+    });
+    html += `<tr style="background:#eaf0f6;font-weight:700;">
+      <td colspan="3" style="text-align:right;">মোট খরচ:</td>
+      <td style="text-align:right;">৳ ${total.toLocaleString('bn-BD')}</td>
+    </tr>`;
+  }
   html += '</tbody></table>';
   html += '</div>';
   return html;
@@ -994,6 +1202,11 @@ async function loadView() {
     return;
   }
 
+  if (state.activeView === 'due') {
+    await renderDue();
+    return;
+  }
+
   const raw = await apiGet(state.sheetNames[state.activeView]);
   if (state.isReset) { finishProgress(); return; }
   state.data = raw;
@@ -1009,6 +1222,11 @@ function renderCurrentView() {
 
   if (state.activeView === 'dashboard') {
     renderDashboard();
+    return;
+  }
+
+  if (state.activeView === 'due') {
+    renderDue();
     return;
   }
 
@@ -1069,6 +1287,9 @@ window.addRow = function(view) {
   }
 
   if (!tbody) return;
+
+  const noResRow = tbody.querySelector('.no-result');
+  if (noResRow && noResRow.closest('tr')) noResRow.closest('tr').remove();
 
   const newIndex = state.data.length;
   const tr = document.createElement('tr');
