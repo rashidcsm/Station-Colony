@@ -771,7 +771,6 @@ async function renderDashboard() {
 
   const balanceColor = balance >= 0 ? 'green' : 'red';
   html += `<div class="dash-card ${balanceColor}">
-   <span class="icon">${balance >= 0 ? '✅' : '⚠️'}</span>
     <div class="label">বর্তমান ব্যালেন্স</div>
     <div class="value">৳ ${balance.toLocaleString('bn-BD')}</div>
   </div>`;
