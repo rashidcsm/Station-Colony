@@ -746,25 +746,25 @@ async function renderDashboard() {
   </div>`;
 
   html += `<div class="dash-card green">
-    <span class="icon">💰</span>
+    
     <div class="label">${monthName} মাসিক আদায়</div>
     <div class="value">৳ ${monthCollected.toLocaleString('bn-BD')}</div>
   </div>`;
 
   html += `<div class="dash-card orange">
-    <span class="icon">📊</span>
+    
     <div class="label">${monthName} মাসিক পরিশোধ</div>
     <div class="value">${monthPaidCount}<span class="unit">/${monthTotalCount} জন</span></div>
   </div>`;
 
   html += `<div class="dash-card teal">
-    <span class="icon">💵</span>
+    
     <div class="label">মোট জমা (ফি + সারসংক্ষেপ)</div>
     <div class="value">৳ ${totalIncome.toLocaleString('bn-BD')}</div>
   </div>`;
 
   html += `<div class="dash-card red">
-    <span class="icon">💸</span>
+    
     <div class="label">মোট খরচ</div>
     <div class="value">৳ ${totalExpense.toLocaleString('bn-BD')}</div>
   </div>`;
